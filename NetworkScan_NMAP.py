@@ -36,6 +36,8 @@ def scan_active_hosts(target)
 
     return iplist_active
 
+
+
 # def to sort IPs
 def sort_ips(ips):
     for i in range(len(ips)):
