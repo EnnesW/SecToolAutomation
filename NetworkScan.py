@@ -17,8 +17,20 @@ def sort_ips(ips):
 
     return ips
 
-def Main():
+def main():
+    # Add parser args
+    parser = argparse.ArgumentParser('Scan a network for open ports and services.')
+    # Target(s)
+    parser.add_argument('target', nargs=1, type=str, \
+        help='Target specification. E.g.: "192.168.0.0/24"')
+    # Output location for json file
+    parser.add_argument('output', \
+        help='Output location. E.g.: "home/filename.json"')
+    parser.add_argument('-u', '--udp', action='store_true', \
+        help='Perform additional UDP scan on top of TCP scan, will take considerably more time.')
+    args = parser.parse_args()
+
     return
 
 if __name__ == "__main__":
-    return
+    main()
