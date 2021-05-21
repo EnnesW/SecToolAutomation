@@ -8,6 +8,8 @@ import re
 import datetime
 import time
 import shodan
+from bs4 import BeautifulSoup
+import requests
 
 class NetworkScan(object):
     def __init__(self):
@@ -212,6 +214,7 @@ class NetworkScan(object):
             if foundip == False:
                 for result in obj:
                     portnumb = result['ports'][0]['port']
+                    proto = result['ports'][0]['proto']
                     ports.append({'port': portnumb, 'protocol': proto, 'found_by': 'masscan', 'confirmed_by': []})
                 
                 dic = {'ip': target, 'ports': ports, 'found_by': 'masscan', 'confirmed_by': []}
@@ -220,18 +223,35 @@ class NetworkScan(object):
     def shodanScan(self, target):
         print("[x] Shodan ...")
 
+        ports = []
+
         try:
             api = shodan.Shodan(self.API_KEY)
             result = api.host(target)
-
             found = False
             for ip in self.results:
-                if ip['ip'] == result:
+                if ip['ip'] == result['ip_str']:
                     found = True
                     ip['confirmed_by'].append("Shodan")
-                    break
+
+                    for portnumb in result['ports']:
+                        proto = "tcp"
+                        foundport = False
+                        for numb in ip['ports']:
+                            if foundport == False:                                  
+                                if int(numb['port']) == int(portnumb) and numb['protocol'] == proto:
+                                    foundport = True
+                                    numb['confirmed_by'].append("Shodan")
+                            else: break
+
+                    if foundport == False:
+                        ports.append({'port': portnumb, 'protocol': proto, 'found_by': 'Shodan', 'confirmed_by': []})
             
             if found == False:
+                for portnumb in result['ports']:
+                    proto = "tcp"
+                    ports.append({'port': portnumb, 'protocol': proto, 'found_by': 'Shodan', 'confirmed_by': []})
+
                 dic = {'ip': target, 'ports': [], 'found_by': 'Shodan', 'confirmed_by': []}
                 self.results.append(dic)
 
@@ -241,7 +261,48 @@ class NetworkScan(object):
 
     def censysScan(self, target):
         print("[x] Censys ...")
-        return
+        ports = []
+
+        url = f"https://censys.io/ipv4/{target}/raw"
+
+        headers = {"User-Agent": 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36'}
+        page = requests.get(url, headers=headers).text
+        soup = BeautifulSoup(page, 'html.parser')
+       
+        text = soup.find("code").get_text()
+        result = json.loads(text)
+
+        try: 
+            found = False
+            for ip in self.results:
+                if ip['ip'] == result['ip']:
+                    found = True
+                    ip['confirmed_by'].append("Censys")
+
+                    for portnumb in result['ports']:
+                        proto = "tcp"
+                        foundport = False
+                        for numb in ip['ports']:
+                            if foundport == False:                                  
+                                if int(numb['port']) == int(portnumb) and numb['protocol'] == proto:
+                                    foundport = True
+                                    numb['confirmed_by'].append("Censys")
+                            else: break
+
+                    if foundport == False:
+                        ports.append({'port': portnumb, 'protocol': proto, 'found_by': 'Censys', 'confirmed_by': []})
+                
+            if found == False:
+                for portnumb in result['ports']:
+                    proto = "tcp"
+                    ports.append({'port': portnumb, 'protocol': proto, 'found_by': 'Censys', 'confirmed_by': []})
+
+                dic = {'ip': target, 'ports': [], 'found_by': 'Censys', 'confirmed_by': []}
+                self.results.append(dic)
+
+        except Exception as e:
+            print(f"\n[!][!] AN ERROR OCCURRED, IT IS POSSIBLE NO INFORMATION WAS FOUND. SEE THE ERROR BELOW FOR FURTHER INFORMATION FOR IP {target}.\n")
+            print(f"CENSYS ERROR: {e}")
 
     def scanInternal(self, target):
         self.nmapScan(target)
