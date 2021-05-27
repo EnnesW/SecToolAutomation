@@ -110,12 +110,13 @@ class NetworkScan(object):
         hosts_list = [(x, nm[x]['status']['state']) for x in nm.all_hosts()]
         for host, status in hosts_list:
             if status == 'up' and self.results.__contains__(host) != True:
-                nm.scan(hosts=target, arguments=f'-v {args} p0-65535')
+                nm.scan(hosts=target, arguments=f'-v -sV {args} p0-65535')
                 for proto in nm[host].all_protocols():
                     lport = nm[host][proto].keys()
                     for port in lport:
+                        service = nm[host][proto][port]['name']
                         if ports.__contains__(port) == False:
-                            ports.append({'port': port, 'protocol': proto, 'found_by': 'NMAP', 'confirmed_by': []})
+                            ports.append({'port': port, 'protocol': proto, 'service': service, 'found_by': 'NMAP', 'confirmed_by': []})
 
                 dic = {'ip': target, 'ports': ports, 'found_by': 'NMAP', 'confirmed_by': []}
                 self.results.append(dic)
@@ -209,13 +210,13 @@ class NetworkScan(object):
                             else: break
 
                     if foundport == False:
-                        ports.append({'port': portnumb, 'protocol': proto, 'found_by': 'masscan', 'confirmed_by': []})
+                        ports.append({'port': portnumb, 'protocol': proto, 'service': 'unknown', 'found_by': 'masscan', 'confirmed_by': []})
 
             if foundip == False:
                 for result in obj:
                     portnumb = result['ports'][0]['port']
                     proto = result['ports'][0]['proto']
-                    ports.append({'port': portnumb, 'protocol': proto, 'found_by': 'masscan', 'confirmed_by': []})
+                    ports.append({'port': portnumb, 'protocol': proto, 'service': 'unknown', 'found_by': 'masscan', 'confirmed_by': []})
                 
                 dic = {'ip': target, 'ports': ports, 'found_by': 'masscan', 'confirmed_by': []}
                 self.results.append(dic)
@@ -228,6 +229,7 @@ class NetworkScan(object):
         try:
             api = shodan.Shodan(self.API_KEY)
             result = api.host(target)
+            print(result)
             found = False
             for ip in self.results:
                 if ip['ip'] == result['ip_str']:
@@ -245,12 +247,12 @@ class NetworkScan(object):
                             else: break
 
                     if foundport == False:
-                        ports.append({'port': portnumb, 'protocol': proto, 'found_by': 'Shodan', 'confirmed_by': []})
+                        ports.append({'port': portnumb, 'protocol': proto, 'service': 'unknown', 'found_by': 'Shodan', 'confirmed_by': []})
             
             if found == False:
                 for portnumb in result['ports']:
                     proto = "tcp"
-                    ports.append({'port': portnumb, 'protocol': proto, 'found_by': 'Shodan', 'confirmed_by': []})
+                    ports.append({'port': portnumb, 'protocol': proto, 'service': 'unknown', 'found_by': 'Shodan', 'confirmed_by': []})
 
                 dic = {'ip': target, 'ports': [], 'found_by': 'Shodan', 'confirmed_by': []}
                 self.results.append(dic)
@@ -290,12 +292,12 @@ class NetworkScan(object):
                             else: break
 
                     if foundport == False:
-                        ports.append({'port': portnumb, 'protocol': proto, 'found_by': 'Censys', 'confirmed_by': []})
+                        ports.append({'port': portnumb, 'protocol': proto, 'service': 'unknown', 'found_by': 'Censys', 'confirmed_by': []})
                 
             if found == False:
                 for portnumb in result['ports']:
                     proto = "tcp"
-                    ports.append({'port': portnumb, 'protocol': proto, 'found_by': 'Censys', 'confirmed_by': []})
+                    ports.append({'port': portnumb, 'protocol': proto, 'service': 'unknown', 'found_by': 'Censys', 'confirmed_by': []})
 
                 dic = {'ip': target, 'ports': [], 'found_by': 'Censys', 'confirmed_by': []}
                 self.results.append(dic)
